@@ -1,0 +1,59 @@
+apply plugin: 'com.android.model.application'
+
+model {
+    android {
+        compileSdkVersion = 23
+        buildToolsVersion = "23.0.2"
+
+        defaultConfig.with {
+            applicationId = "home.my.jni_demo"
+            minSdkVersion.apiLevel = 19
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "1.0"
+        }
+
+
+    }
+    android.buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles += file("proguard-rules.pro")
+        }
+    }
+    android.ndk {
+        moduleName = "speex"
+        CFlags += "-DFIXED_POINT"
+        CFlags += "-DUSE_KISS_FFT"
+        CFlags += "-DEXPORT=\"\""
+        CFlags += "-UHAVE_CONFIG_H"
+        /*
+     * Other ndk flags configurable here are
+     * cppFlags += "-fno-rtti"
+     * cppFlags += "-fno-exceptions"
+     * ldLibs    = ["android", "log"]
+     * stl       = "system"
+     */
+    }
+    android.productFlavors {
+        // for detailed abiFilter descriptions, refer to "Supported ABIs" @
+        // https://developer.android.com/ndk/guides/abis.html#sa
+        create("arm") {
+            ndk.abiFilters += "armeabi"
+        }
+        create("arm7") {
+            ndk.abiFilters += "armeabi-v7a"
+        }
+        create("arm8") {
+            ndk.abiFilters += "arm64-v8a"
+        }
+        // To include all cpu architectures, leaves abiFilters empty
+        //create("all")
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:23.0.1'
+    compile 'com.jakewharton:butterknife:7.0.1'
+}
