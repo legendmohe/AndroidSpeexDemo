@@ -12,7 +12,16 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.squareup.okhttp.Callback;
+import com.squareup.okhttp.Headers;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -21,6 +30,7 @@ import home.my.jni_demo.speex.WriteSpeexOggFileRunnable;
 public class MainActivity extends AppCompatActivity implements ProcessSpeexRunnable.ProcessSpeexListener {
 
     private static final String TAG = "MainActivity";
+    private TextView mTextView;
     private Button btn_RecordStart;
     private Button btn_RecordStop;
     private Button btn_RecordPlay;
@@ -32,15 +42,17 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
     private ProcessSpeexRunnable mProcessSpeexRunnable;
     private WriteSpeexOggFileRunnable mWriteSpeexOggFileRunnable;
 
+    private OkHttpClient mHttpClient = new OkHttpClient();
+    private MediaType mMediaType = MediaType.parse("text/html; charset=UTF-8");
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // TODO Auto-generated method stub
         super.onCreate(savedInstanceState);
         setContentView(R.layout.content_scrolling);
 
-        TextView mTextView = (TextView) this.findViewById(R.id.jni_text_view);
-
-        mTextView.setText(String.format("getFrameSize:%d", 9999));
+        mTextView = (TextView) this.findViewById(R.id.jni_text_view);
+        mTextView.setText("hello world");
 
         btn_RecordStart = (Button) findViewById(R.id.btn_RecordStart);
         btn_RecordPlay = (Button) findViewById(R.id.btn_PlayRecord);
@@ -162,8 +174,49 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
         mCurrentRecordData = data;
         mWriteSpeexOggFileRunnable.stop();
 
-        Log.d(TAG, "base 64:" + FileUtils.FileToBase64(mWriteSpeexOggFileRunnable.getOutputFile()));
+        File outputFile = mWriteSpeexOggFileRunnable.getOutputFile();
+        String payload = FileUtils.FileToBase64(outputFile);
+        Log.d(TAG, "base 64:" + payload);
+        Log.d(TAG, "file path:" + outputFile.getAbsolutePath());
         Log.d(TAG, "finish process speex data frames: " + data.size());
+
+        Request request = generateRequest(payload, "message");
+        sendMessageRequest(request);
+    }
+
+    private Request generateRequest(String payload, String type) {
+        String url = "http://119.29.102.249:8888/mqtt_base64?t=12345678&type=" + type;
+        RequestBody body = RequestBody.create(mMediaType, payload);
+        return new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+    }
+
+    private void sendMessageRequest(Request request) {
+        mHttpClient.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Request request, IOException e) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTextView.setText("http error");
+                    }
+                });
+            }
+
+            @Override public void onResponse(Response response) throws IOException {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+
+                final String str = response.body().string();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mTextView.setText(str);
+                    }
+                });
+            }
+        });
     }
 
     private void playRecord() {

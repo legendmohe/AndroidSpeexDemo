@@ -29,7 +29,12 @@ public class WriteSpeexOggFileRunnable implements Runnable {
 
         mIsRecording = true;
 		while (this.isRecording()) {
-            mData = mDataQueue.take();
+            try {
+                mData = mDataQueue.take();
+            } catch (InterruptedException e) {
+                Log.e(TAG, Log.getStackTraceString(e));
+                mData = null;
+            }
             if (mData != null) {
                 Log.d(TAG, "mData size=" + mData.size);
                 mSpeexWriteClient.writePacket(mData.processed, mData.size);
@@ -40,11 +45,16 @@ public class WriteSpeexOggFileRunnable implements Runnable {
         Log.d(TAG, "write thread exit");
 	}
 
-	public void putData(final byte[] buf, int size) {
-//		Log.d(TAG, "after convert. size=====================[640]:" + size);
+	public boolean putData(final byte[] buf, int size) {
 		processedData data = new processedData(buf, size);
-		mDataQueue.put(data);
-	}
+        try {
+            mDataQueue.put(data);
+        } catch (InterruptedException e) {
+            Log.e(TAG, Log.getStackTraceString(e));
+            return false;
+        }
+        return true;
+    }
 
 	public void stop() {
         synchronized (mutex) {
