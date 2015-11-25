@@ -3,7 +3,7 @@ package home.my.jni_demo.speex;
 import android.util.Log;
 
 import java.io.File;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class WriteSpeexOggFileRunnable implements Runnable {
@@ -14,13 +14,13 @@ public class WriteSpeexOggFileRunnable implements Runnable {
     private SpeexWriteClient mSpeexWriteClient = new SpeexWriteClient();
 	private volatile boolean mIsRecording;
 	private processedData mData;
-	private ConcurrentLinkedQueue<processedData> mDataQueue;
+	private LinkedBlockingQueue<processedData> mDataQueue;
 
 	public static int write_packageSize = 1024;
 
 	public WriteSpeexOggFileRunnable(File file) {
         this.mFile = file;
-		mDataQueue = new ConcurrentLinkedQueue<>();
+		mDataQueue = new LinkedBlockingQueue<>();
 		mSpeexWriteClient.start(file, SpeexWriteClient.MODE_NB, SpeexWriteClient.SAMPLERATE_8000, true);
 	}
 
@@ -29,7 +29,7 @@ public class WriteSpeexOggFileRunnable implements Runnable {
 
         mIsRecording = true;
 		while (this.isRecording()) {
-            mData = mDataQueue.poll();
+            mData = mDataQueue.take();
             if (mData != null) {
                 Log.d(TAG, "mData size=" + mData.size);
                 mSpeexWriteClient.writePacket(mData.processed, mData.size);
@@ -43,7 +43,7 @@ public class WriteSpeexOggFileRunnable implements Runnable {
 	public void putData(final byte[] buf, int size) {
 //		Log.d(TAG, "after convert. size=====================[640]:" + size);
 		processedData data = new processedData(buf, size);
-		mDataQueue.offer(data);
+		mDataQueue.put(data);
 	}
 
 	public void stop() {
