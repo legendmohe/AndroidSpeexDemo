@@ -19,7 +19,7 @@ public class ProcessSpeexRunnable implements Runnable {
     private LinkedBlockingQueue<AudioRawData> mBufferQueue;
     private LinkedList<byte[]> mEncodedData;
     private boolean mStopped = false;
-    private static final AudioRawData sStopAudioData = new AudioRawData();
+    private static final AudioRawData sStopAudioData = new AudioRawData(null, -1);
 
     private int totByte;
 
