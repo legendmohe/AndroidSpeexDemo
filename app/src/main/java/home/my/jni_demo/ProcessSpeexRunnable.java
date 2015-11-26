@@ -5,7 +5,7 @@ import android.util.Log;
 import java.lang.ref.WeakReference;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,15 +16,16 @@ public class ProcessSpeexRunnable implements Runnable {
     private final WeakReference<ProcessSpeexListener> mListener;
 
     private Speex mSpeexLib;
-    private LinkedBlockingDeque<AudioRawData> mBufferQueue;
+    private LinkedBlockingQueue<AudioRawData> mBufferQueue;
     private LinkedList<byte[]> mEncodedData;
     private boolean mStopped = false;
+    private static final AudioRawData sStopAudioData = new AudioRawData();
 
     private static final int POLL_TIMEOUT = 1000;
 
     private int totByte;
 
-    ProcessSpeexRunnable(LinkedBlockingDeque<AudioRawData> queue, ProcessSpeexListener listener) {
+    ProcessSpeexRunnable(LinkedBlockingQueue<AudioRawData> queue, ProcessSpeexListener listener) {
         this.mBufferQueue = queue;
         this.mListener = new WeakReference<ProcessSpeexListener>(listener);
         init();
@@ -40,15 +41,17 @@ public class ProcessSpeexRunnable implements Runnable {
             while (this.mBufferQueue != null && !this.mStopped) {
                 AudioRawData data = null;
                 try {
-                    data = this.mBufferQueue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS);
+                    data = this.mBufferQueue.take();
                 } catch (InterruptedException e) {
                     Log.e(TAG, "poll error: " + e.toString());
                     continue;
                 }
                 if (data == null) {
                     continue;
-                }
-                if (data.len > 0)
+                }else if (data == sStopAudioData) {
+                    this.mStopped = true;
+                    continue;
+                }else if (data.len > 0)
                     process(data.data, data.len);
             }
         } finally {
@@ -62,7 +65,15 @@ public class ProcessSpeexRunnable implements Runnable {
     }
 
     public void stop() {
-        this.mStopped = true;
+        if (this.mBufferQueue == null) {
+            this.mStopped = true;
+        }else {
+            try {
+                this.mBufferQueue.put(sStopAudioData);
+            } catch (InterruptedException e) {
+                Log.e(TAG, "stop flag error: " + e.toString());
+            }
+        }
     }
 
     private void init() {
