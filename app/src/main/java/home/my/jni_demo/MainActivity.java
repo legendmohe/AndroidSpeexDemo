@@ -23,7 +23,7 @@ import com.squareup.okhttp.Response;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import home.my.jni_demo.speex.WriteSpeexOggFileRunnable;
 
@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
                 mWriteSpeexOggFileRunnable = null;
             }
 
-            LinkedBlockingDeque<AudioRawData> blockingDeque = new LinkedBlockingDeque<>();
+            LinkedBlockingQueue<AudioRawData> blockingDeque = new LinkedBlockingQueue<>();
             File rootDir = Environment.getExternalStorageDirectory();
 
             mWriteSpeexOggFileRunnable = new WriteSpeexOggFileRunnable(new File(rootDir, "test.spx"));
