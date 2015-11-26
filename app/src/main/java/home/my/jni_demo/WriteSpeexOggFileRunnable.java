@@ -1,24 +1,30 @@
-package home.my.jni_demo.speex;
+package home.my.jni_demo;
 
 import android.util.Log;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import home.my.jni_demo.speex.SpeexWriteClient;
 
 
 public class WriteSpeexOggFileRunnable implements Runnable {
-    private final static String TAG = "WriteSpeexOggFileRunnable";
+    private final static String TAG = "WriteSpeexOggFile";
     
     private final File mFile;
     private SpeexWriteClient mSpeexWriteClient = new SpeexWriteClient();
     private volatile boolean mIsRecording;
-    private processedData mData;
-    private LinkedBlockingQueue<processedData> mDataQueue;
+    private ProcessedData mData;
+    private LinkedBlockingQueue<ProcessedData> mDataQueue;
+
+    private WeakReference<WriteSpeexOggListener> mWriteSpeexOggListener;
 
     public static int sWritePackageSize = 1024;
 
-    public WriteSpeexOggFileRunnable(File file) {
+    public WriteSpeexOggFileRunnable(File file, WriteSpeexOggListener listener) {
         this.mFile = file;
+        this.mWriteSpeexOggListener = new WeakReference<WriteSpeexOggListener>(listener);
         mDataQueue = new LinkedBlockingQueue<>();
         mSpeexWriteClient.start(file, SpeexWriteClient.MODE_NB, SpeexWriteClient.SAMPLERATE_8000, true);
     }
@@ -43,11 +49,14 @@ public class WriteSpeexOggFileRunnable implements Runnable {
         }
         mSpeexWriteClient.stop();
 
+        if (mWriteSpeexOggListener.get() != null) {
+            mWriteSpeexOggListener.get().onWriteSpeexOggFileFinished(this.mFile);
+        }
         Log.d(TAG, "write thread exit");
     }
 
     public boolean putData(final byte[] buf, int size) {
-        processedData data = new processedData(buf, size);
+        ProcessedData data = new ProcessedData(buf, size);
         try {
             mDataQueue.put(data);
         } catch (InterruptedException e) {
@@ -73,8 +82,12 @@ public class WriteSpeexOggFileRunnable implements Runnable {
         return mIsRecording;
     }
 
-    class processedData {
-        processedData(byte[] buf, int size) {
+    public interface WriteSpeexOggListener {
+        void onWriteSpeexOggFileFinished(File file);
+    }
+
+    static class ProcessedData {
+        ProcessedData(byte[] buf, int size) {
             if(buf != null)
                 System.arraycopy(buf, 0, this.processed, 0, size);
             this.size = size;

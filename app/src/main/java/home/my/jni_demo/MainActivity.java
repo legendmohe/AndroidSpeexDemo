@@ -13,7 +13,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.okhttp.Callback;
-import com.squareup.okhttp.Headers;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
@@ -25,9 +24,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import home.my.jni_demo.speex.WriteSpeexOggFileRunnable;
-
-public class MainActivity extends AppCompatActivity implements ProcessSpeexRunnable.ProcessSpeexListener {
+public class MainActivity extends AppCompatActivity
+        implements ProcessSpeexRunnable.ProcessSpeexListener , WriteSpeexOggFileRunnable.WriteSpeexOggListener{
 
     private static final String TAG = "MainActivity";
     private TextView mTextView;
@@ -110,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
             LinkedBlockingQueue<AudioRawData> blockingDeque = new LinkedBlockingQueue<>();
             File rootDir = Environment.getExternalStorageDirectory();
 
-            mWriteSpeexOggFileRunnable = new WriteSpeexOggFileRunnable(new File(rootDir, "test.spx"));
+            mWriteSpeexOggFileRunnable = new WriteSpeexOggFileRunnable(new File(rootDir, "test.spx"), this);
             mProcessSpeexRunnable = new ProcessSpeexRunnable(blockingDeque, this);
             mAudioRunnable = new AudioRecorderRunnable(blockingDeque);
 
@@ -173,15 +171,7 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
     public void onProcessFinish(List<byte[]> data) {
         mCurrentRecordData = data;
         mWriteSpeexOggFileRunnable.stop();
-
-        File outputFile = mWriteSpeexOggFileRunnable.getOutputFile();
-        String payload = FileUtils.FileToBase64(outputFile);
-        Log.d(TAG, "base 64:" + payload);
-        Log.d(TAG, "file path:" + outputFile.getAbsolutePath());
         Log.d(TAG, "finish process speex data frames: " + data.size());
-
-        Request request = generateRequest(payload, "message");
-        sendMessageRequest(request);
     }
 
     private Request generateRequest(String payload, String type) {
@@ -243,5 +233,14 @@ public class MainActivity extends AppCompatActivity implements ProcessSpeexRunna
         audioTrack.release();
         speex.close();
         btn_RecordPlay.setEnabled(true);
+    }
+
+    @Override
+    public void onWriteSpeexOggFileFinished(File file) {
+        String payload = FileUtils.FileToBase64(file);
+        Log.d(TAG, "base 64:" + payload);
+        Log.d(TAG, "file path:" + file.getAbsolutePath());
+        Request request = generateRequest(payload, "message");
+        sendMessageRequest(request);
     }
 }
