@@ -5,7 +5,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
 
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by legendmohe on 15/11/13.
@@ -14,9 +14,9 @@ public class AudioRecorderRunnable implements Runnable {
     private static final String TAG = "AudioRecorderRunnable";
 
     private boolean mStopped = false;
-    private LinkedBlockingDeque<AudioRawData> mBufferQueue;
+    private LinkedBlockingQueue<AudioRawData> mBufferQueue;
 
-    AudioRecorderRunnable(LinkedBlockingDeque<AudioRawData> queue){
+    AudioRecorderRunnable(LinkedBlockingQueue<AudioRawData> queue){
         this.mBufferQueue = queue;
     }
 
@@ -39,7 +39,7 @@ public class AudioRecorderRunnable implements Runnable {
                     n*10);
 //                recorder.setPositionNotificationPeriod(8000);
             recorder.startRecording();
-            while(!mStopped) {
+            while(!this.mStopped) {
                 short[] buffer = buffers[ix++ % buffers.length];
                 n = recorder.read(buffer,0,buffer.length);
                 this.mBufferQueue.offer(new AudioRawData(buffer, n));
@@ -56,7 +56,7 @@ public class AudioRecorderRunnable implements Runnable {
     }
 
     public void stop() {
-        mStopped = true;
+        this.mStopped = true;
     }
 
 }
