@@ -7,7 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class WriteSpeexOggFileRunnable implements Runnable {
-	private final static String TAG = "SpeexWriter";
+	private final static String TAG = "WriteSpeexOggFileRunnable";
 	private final Object mutex = new Object();
     private final File mFile;
 
