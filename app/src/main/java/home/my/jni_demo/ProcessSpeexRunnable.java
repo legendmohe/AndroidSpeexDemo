@@ -21,8 +21,6 @@ public class ProcessSpeexRunnable implements Runnable {
     private boolean mStopped = false;
     private static final AudioRawData sStopAudioData = new AudioRawData();
 
-    private static final int POLL_TIMEOUT = 1000;
-
     private int totByte;
 
     ProcessSpeexRunnable(LinkedBlockingQueue<AudioRawData> queue, ProcessSpeexListener listener) {
