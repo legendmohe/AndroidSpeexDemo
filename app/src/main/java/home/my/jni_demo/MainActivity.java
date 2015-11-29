@@ -5,6 +5,8 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -28,6 +30,9 @@ public class MainActivity extends AppCompatActivity
         implements ProcessSpeexRunnable.ProcessSpeexListener , WriteSpeexOggFileRunnable.WriteSpeexOggListener{
 
     private static final String TAG = "MainActivity";
+
+    private static final int STOP_RECORDING = 0;
+
     private TextView mTextView;
     private Button btn_RecordStart;
     private Button btn_RecordStop;
@@ -35,6 +40,7 @@ public class MainActivity extends AppCompatActivity
 
     private boolean isRecording;
     List<byte[]> mCurrentRecordData = null;
+    private MyHandler mHandler;
 
     private AudioRecorderRunnable mAudioRunnable;
     private ProcessSpeexRunnable mProcessSpeexRunnable;
@@ -60,6 +66,8 @@ public class MainActivity extends AppCompatActivity
         btn_RecordStart.setOnClickListener(click);
         btn_RecordStop.setOnClickListener(click);
         btn_RecordPlay.setOnClickListener(click);
+
+        mHandler = new MyHandler();
     }
 
     private View.OnClickListener click = new View.OnClickListener() {
@@ -71,7 +79,7 @@ public class MainActivity extends AppCompatActivity
                     start();
                     break;
                 case R.id.btn_RecordStop:
-                    stopRecording();
+                    mHandler.sendEmptyMessageDelayed(STOP_RECORDING, 500);
                     break;
                 case R.id.btn_PlayRecord:
                     playRecord();
@@ -110,7 +118,7 @@ public class MainActivity extends AppCompatActivity
 
             mWriteSpeexOggFileRunnable = new WriteSpeexOggFileRunnable(new File(rootDir, "test.spx"), this);
             mProcessSpeexRunnable = new ProcessSpeexRunnable(blockingDeque, this);
-            mAudioRunnable = new AudioRecorderRunnable(blockingDeque);
+            mAudioRunnable = new AudioRecorderRunnable(blockingDeque, 1.5f);
 
             new Thread(mWriteSpeexOggFileRunnable).start();
             new Thread(mProcessSpeexRunnable).start();
@@ -118,7 +126,7 @@ public class MainActivity extends AppCompatActivity
 
             Toast.makeText(MainActivity.this, "开始录音", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            e.printStackTrace();
+            Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -137,7 +145,6 @@ public class MainActivity extends AppCompatActivity
             }
             isRecording=false;
 
-            btn_RecordStart.setEnabled(true);
             btn_RecordStop.setEnabled(false);
             Toast.makeText(MainActivity.this, "录音结束", Toast.LENGTH_SHORT).show();
         }
@@ -163,6 +170,12 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public void onPreProcess(short[] notProcessData, int len) {
+
+
+    }
+
+    @Override
     public void onProcess(byte[] data, int len) {
         mWriteSpeexOggFileRunnable.putData(data, len);
     }
@@ -184,6 +197,12 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void sendMessageRequest(Request request) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTextView.setText("sending request");
+            }
+        });
         mHttpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Request request, IOException e) {
@@ -191,6 +210,7 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void run() {
                         mTextView.setText("http error");
+                        btn_RecordStart.setEnabled(true);
                     }
                 });
             }
@@ -203,6 +223,7 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void run() {
                         mTextView.setText(str);
+                        btn_RecordStart.setEnabled(true);
                     }
                 });
             }
@@ -242,5 +263,19 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "file path:" + file.getAbsolutePath());
         Request request = generateRequest(payload, "message");
         sendMessageRequest(request);
+    }
+
+    private class MyHandler extends Handler {
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case STOP_RECORDING:
+                    stopRecording();
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 }

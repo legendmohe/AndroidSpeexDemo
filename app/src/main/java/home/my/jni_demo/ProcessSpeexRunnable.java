@@ -6,7 +6,6 @@ import java.lang.ref.WeakReference;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by legendmohe on 15/11/13.
@@ -89,6 +88,10 @@ public class ProcessSpeexRunnable implements Runnable {
     }
 
     private void process(short[] buffer, int n) {
+        if (mListener.get() != null) {
+            mListener.get().onPreProcess(buffer, n);
+        }
+
         byte[] encoded = new byte[n];
         int encLen = this.mSpeexLib.encode(buffer, 0, encoded, buffer.length);
 
@@ -100,12 +103,13 @@ public class ProcessSpeexRunnable implements Runnable {
             mEncodedData.add(wrapData);
         }
 
-        if (mListener != null) {
+        if (mListener.get() != null) {
             mListener.get().onProcess(encoded, encLen);
         }
     }
 
     public interface ProcessSpeexListener {
+        void onPreProcess(short[] notProcessData, int len);
         void onProcess(byte[] data, int len);
         void onProcessFinish(List<byte[]> data);
     }

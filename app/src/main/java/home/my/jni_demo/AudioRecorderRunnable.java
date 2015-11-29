@@ -15,9 +15,11 @@ public class AudioRecorderRunnable implements Runnable {
 
     private boolean mStopped = false;
     private LinkedBlockingQueue<AudioRawData> mBufferQueue;
+    private float mGain;
 
-    AudioRecorderRunnable(LinkedBlockingQueue<AudioRawData> queue){
+    AudioRecorderRunnable(LinkedBlockingQueue<AudioRawData> queue, float gain) {
         this.mBufferQueue = queue;
+        this.mGain = gain;
     }
 
     @Override
@@ -30,6 +32,7 @@ public class AudioRecorderRunnable implements Runnable {
         AudioRecord recorder = null;
         short[][]   buffers  = new short[256][160];
         int         ix       = 0;
+        float gain = this.mGain;
         try {
             int n = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
             recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
@@ -41,7 +44,11 @@ public class AudioRecorderRunnable implements Runnable {
             recorder.startRecording();
             while(!this.mStopped) {
                 short[] buffer = buffers[ix++ % buffers.length];
-                n = recorder.read(buffer,0,buffer.length);
+                int numRead = recorder.read(buffer, 0, buffer.length);
+                if (numRead > 0) {
+                    for (int i = 0; i < numRead; ++i)
+                        buffer[i] = (short) Math.min((int) (buffer[i] * gain), (int) Short.MAX_VALUE);
+                }
                 this.mBufferQueue.offer(new AudioRawData(buffer, n));
             }
         } catch(Throwable x) {

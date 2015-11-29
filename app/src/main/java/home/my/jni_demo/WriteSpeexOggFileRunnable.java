@@ -24,14 +24,13 @@ public class WriteSpeexOggFileRunnable implements Runnable {
 
     public WriteSpeexOggFileRunnable(File file, WriteSpeexOggListener listener) {
         this.mFile = file;
-        this.mWriteSpeexOggListener = new WeakReference<WriteSpeexOggListener>(listener);
+        this.mWriteSpeexOggListener = new WeakReference<>(listener);
         mDataQueue = new LinkedBlockingQueue<>();
-        mSpeexWriteClient.start(file, SpeexWriteClient.MODE_NB, SpeexWriteClient.SAMPLERATE_8000, true);
     }
 
     public void run() {
         Log.d(TAG, "write thread runing");
-
+        mSpeexWriteClient.start(this.mFile, SpeexWriteClient.MODE_NB, SpeexWriteClient.SAMPLERATE_8000, true);
         mIsRecording = true;
         while (this.isRecording()) {
             try {
