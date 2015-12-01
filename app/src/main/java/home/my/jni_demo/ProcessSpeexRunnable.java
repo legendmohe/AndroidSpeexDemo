@@ -35,7 +35,7 @@ public class ProcessSpeexRunnable implements Runnable {
             return;
         }
         try {
-            while (this.mBufferQueue.size() != 0 || !this.mStopped) {
+            while (!this.mStopped) {
                 AudioRawData data = null;
                 try {
                     data = this.mBufferQueue.take();
